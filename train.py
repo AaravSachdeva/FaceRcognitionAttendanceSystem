@@ -152,6 +152,17 @@ def track_images():
     col_names = ['Roll No', 'Name', 'Time']
     attendance = pd.DataFrame(columns=col_names)
 
+    # Generate the file name based on today's date
+    timestamp = datetime.now()
+    file_name = f"Attendance_{timestamp.strftime('%d-%m-%Y')}.csv"
+    file_path = f"Attendance/{file_name}"
+
+    # Load existing attendance if the file exists
+    if os.path.exists(file_path):
+        existing_attendance = pd.read_csv(file_path)
+    else:
+        existing_attendance = pd.DataFrame(columns=col_names)
+
     while True:
         ret, img = cam.read()
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -165,8 +176,9 @@ def track_images():
                 timestamp = datetime.now()
                 time = timestamp.strftime('%H:%M:%S')
 
-                # Add entry to attendance DataFrame
-                attendance.loc[len(attendance)] = [roll_no, name, time]
+                # Check if attendance is already marked
+                if not ((existing_attendance['Roll No'] == roll_no).any()):
+                    attendance.loc[len(attendance)] = [roll_no, name, time]
 
                 # Display detected name
                 cv2.putText(img, f"{name} ({roll_no})", (x, y-10), font, 1, (0, 255, 0), 2)
@@ -189,19 +201,12 @@ def track_images():
     cam.release()
     cv2.destroyAllWindows()
 
-    # Generate the file name based on today's date
-    timestamp = datetime.now()
-    file_name = f"Attendance_{timestamp.strftime('%d%m%Y')}.csv"
-    file_path = f"Attendance/{file_name}"
-    
     try:
         os.makedirs("Attendance", exist_ok=True)  # Ensure the Attendance folder exists
-        
-        # Append to the existing file if it exists
-        if os.path.exists(file_path):
-            attendance.to_csv(file_path, mode='a', header=False, index=False)
-        else:
-            attendance.to_csv(file_path, mode='w', header=True, index=False)
+
+        # Append new attendance to the existing file
+        if not attendance.empty:
+            attendance.to_csv(file_path, mode='a', header=not os.path.exists(file_path), index=False)
         
         attendance_message.config(text=f"{file_name}")
         print(f"Attendance saved to {file_name}")
@@ -209,11 +214,13 @@ def track_images():
         notification_message.config(text=f"Error saving attendance: {e}")
 
 # Buttons
-tk.Button(button_frame, text="Take Images", command=take_images, font=("Helvetica", 14), bg="#3498db", fg="white", width=15).grid(row=0, column=0, padx=10, pady=10)
-tk.Button(button_frame, text="Train Model", command=train_images, font=("Helvetica", 14), bg="#2ecc71", fg="white", width=15).grid(row=0, column=1, padx=10, pady=10)
-tk.Button(button_frame, text="Mark Attendance", command=track_images, font=("Helvetica", 14), bg="#f1c40f", fg="black", width=15).grid(row=0, column=2, padx=10, pady=10)
-tk.Button(button_frame, text="Clear", command=clear_entries, font=("Helvetica", 14), bg="#95a5a6", fg="white", width=15).grid(row=0, column=3, padx=10, pady=10)
-tk.Button(button_frame, text="Quit", command=window.quit, font=("Helvetica", 14), bg="#e74c3c", fg="white", width=15).grid(row=0, column=4, padx=10, pady=10)
+tk.Button(button_frame, text="Take Images", command=take_images, font=("Helvetica", 15), bg="#3498db", fg="white", width=15).grid(row=0, column=0, padx=10, pady=5)
+tk.Button(button_frame, text="Train Model", command=train_images, font=("Helvetica", 15), bg="#2ecc71", fg="white", width=15).grid(row=0, column=1, padx=10, pady=5)
+tk.Button(button_frame, text="Clear", command=clear_entries, font=("Helvetica", 15), bg="#95a5a6", fg="white", width=15).grid(row=0, column=2, padx=10, pady=5)
+tk.Button(button_frame, text="Quit", command=window.quit, font=("Helvetica", 15), bg="#e74c3c", fg="white", width=15).grid(row=0, column=3, padx=10, pady=5)
+
+# Mark Attendance Button (Bigger and Below)
+tk.Button(window, text="Mark Attendance", command=track_images, font=("Helvetica", 16, "bold"), bg="#f1c40f", fg="black", width=58, height=2).pack(pady=10)
 
 # Run the application
 window.mainloop()
